@@ -3,14 +3,16 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const app = express();
 
-const PAYPAL_CLIENT_ID = "AStjmimdKdyeKEWPUuSiJzoAOalP_KRK4Iqm4u5PQagFJrUd7vReLRfPNzLgGth6Q6LhWidMNuAR8to4"
-const PAYPAL_CLIENT_SECRET = "ELtkGFIm6JEiowieUvMuZUQvOMhMvlazPg07d-QuHNMzgNC88FBKaZGVB7lHRr8iYbtEg9SQLzdO226H"
+const PAYPAL_CLIENT_ID = "ATljUghO-KF7NYA-9acrGjSs6WKeq04fkrULTozCzuAn4oepcUsZipu3J5kXKY_jthioD7-YewCvtpjr"
+const PAYPAL_CLIENT_SECRET = "EJVvHrwkZy3MgT09oIqErW2mA7F9z7mUwpA8nQqmLhv9UGIY0bOxMrA97Nshx6Rzn1WfwfejRAZps7Kc"
 
 
 app.use(express.json());
 app.use(cors());
 
-const base = "https://api-m.sandbox.paypal.com";
+// const base = "https://api-m.sandbox.paypal.com";
+const base = "https://api-m.paypal.com";
+
 
 const generateAccessToken = async () => {
   try {
