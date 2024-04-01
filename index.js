@@ -1,132 +1,57 @@
-const express = require('express');
-const cors = require('cors');
-const fetch = require('node-fetch');
+const express = require("express");
+const Razorpay = require("razorpay");
+const cors = require("cors");
+const crypto = require("crypto");
+require("dotenv").config();
+
 const app = express();
-
-const PAYPAL_CLIENT_ID = "ARUCPUQdiVCC3NgxYi70GTLCY3LO2yuiNRyL3b0F6TDGeqAV2yc-X5Cjx60Ppvj0fkkSBX2Sj9Xdlr2E"
-const PAYPAL_CLIENT_SECRET = "EI7usVGnJ73wWU5rw-4zVRCGi_DlJgOT5OYHOOpklEmEipSbp8R5zFyXomwwPb_0TgO4qB2tsJoWZwT1"
-
+const PORT = process.env.PORT;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 
- //const base = "https://api-m.sandbox.paypal.com";
-const base = "https://api-m.paypal.com";
-//const base = "https://sandbox.paypal.com";
-
-
-const generateAccessToken = async () => {
+app.post("/order", async (req, res) => {
   try {
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
-      console.log("MISSING_API_CREDENTIALS");
-      return;
+    console.log(process.env?.RAZORPAY_KEY_ID)
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_SECRET,
+    });
+
+    const options = req.body;
+    const order = await razorpay.orders.create(options);
+
+    if (!order) {
+      return res.status(500).send("Error");
     }
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
-    const response = await fetch(`${base}/v1/oauth2/token`, {
-      method: "POST",
-      body: "grant_type=client_credentials",
-      headers: {
-        "Authorization": `Basic ${auth}`
-      },
-    });
-    
-    const data = await response.json();
-    return data.access_token;
-  } catch (error) {
-    console.log("Failed to generate Access Token:", error);
-    throw error;
-  }
-};
-  
-const createOrder = async (cart) => {
-  try {
-    const accessToken = await generateAccessToken();
-    const url = `${base}/v2/checkout/orders`;
-    const payload = {
-      intent: "CAPTURE",
-      purchase_units: [{
-        amount: {
-          currency_code: "USD",
-          value: cart[0].price,
-        },
-      }],
-    };
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    return handleResponse(response);
-  } catch (error) {
-    console.log("Failed to create order:", error);
-    throw error;
-  }
-};
-  
-const captureOrder = async (orderID) => {
-  try {
-    const accessToken = await generateAccessToken();
-    const url = `${base}/v2/checkout/orders/${orderID}/capture`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-      },
-    });
-    return handleResponse(response);
-  } catch (error) {
-    console.log("Failed to capture order:", error);
-    throw error;
-  }
-};
-
-async function handleResponse(response) {
-  try {
-    const jsonResponse = await response.json();
-    return {
-      jsonResponse,
-      httpStatusCode: response.status,
-    };
+    res.json(order);
   } catch (err) {
-    const errorMessage = await response.text();
-    throw new Error(errorMessage);
-  }
-}
-
-app.post("/api/orders", async (req, res) => {
-  try {
-    const { cart } = req.body;
-    const { jsonResponse, httpStatusCode } = await createOrder(cart);
-    res.status(httpStatusCode).send(jsonResponse);
-  } catch (error) {
-    console.log("Failed to create order:", error);
-    res.status(500).send({ error: "Failed to create order." });
-  }
-});
-  
-app.post("/api/orders/:orderID/capture", async (req, res) => {
-  try {
-    const { orderID }  = req.params;
-    const { jsonResponse, httpStatusCode } = await captureOrder(orderID);
-    res.status(httpStatusCode).send(jsonResponse);
-  } catch (error) {
-    console.log("Failed to capture order:", error);
-    res.status(500).send({ error: "Failed to capture order." });
+    console.log(err);
+    res.status(500).send("Error");
   }
 });
 
-const PORT = 5001;
+app.post("/order/validate", async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+    req.body;
 
-app.get("/", (req, res) => {
-  res.send("Hello");
+  const sha = crypto.createHmac("sha256", process.env.RAZORPAY_SECRET);
+  //order_id + "|" + razorpay_payment_id
+  sha.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+  const digest = sha.digest("hex");
+  if (digest !== razorpay_signature) {
+    return res.status(400).json({ msg: "Transaction is not legit!" });
+  }
+
+  res.json({
+    msg: "success",
+    orderId: razorpay_order_id,
+    paymentId: razorpay_payment_id,
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`Node server listening at http://localhost:${PORT}/`);
+  console.log("Listening on port", PORT);
 });
