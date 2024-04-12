@@ -18,9 +18,12 @@ app.post("/order", async (req, res) => {
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_SECRET,
     });
-
-    const options = req.body;
+    let options = req.body;
+    options.amount = Number(options?.amount) * 100
     const order = await razorpay.orders.create(options);
+
+
+    
 
     if (!order) {
       return res.status(500).send("Error");
