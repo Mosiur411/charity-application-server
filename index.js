@@ -20,17 +20,17 @@ app.get("/", async (req, res) => {
   }
 });
 
-
-
 app.post("/order", async (req, res) => {
   try {
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_SECRET,
+      key_id: 'rzp_live_Y7aHoeciCEVfKd',
+      key_secret: 'iV699R0zepoHSO5jVqG4r1mI',
+      /* key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_SECRET, */
     });
 
     let options = req.body;
-    options.amount = Number(options?.amount) * 100
+    /* options.amount = Number(options?.amount) * 100 */
     const order = await razorpay.orders.create(options);
     if (!order) {
       return res.status(500).send("Error");
