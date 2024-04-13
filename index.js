@@ -11,6 +11,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 
+app.get("/", async (req, res) => {
+  try {
+    return res.status(200).send("Hello World");
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+
+
 app.post("/order", async (req, res) => {
   try {
     const razorpay = new Razorpay({
